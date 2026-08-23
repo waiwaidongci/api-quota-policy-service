@@ -1,0 +1,6 @@
+services:
+  api-quota-service:
+    build: ..
+    ports: ["8084:8084"]
+    environment:
+      API_QUOTA_ADDRESS: ":8084"
