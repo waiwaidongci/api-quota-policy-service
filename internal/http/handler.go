@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/example/api-quota-service/internal/application"
 	"github.com/example/api-quota-service/internal/domain"
+	"io"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -174,14 +175,22 @@ func (h *Handler) events(w http.ResponseWriter, r *http.Request) {
 }
 func decode(r *http.Request, v any) error {
 	if r.Body == nil {
-		return json.NewDecoder(r.Body).Decode(v)
+		return errors.New("request body is required")
 	}
 	defer r.Body.Close()
-	d := json.NewDecoder(r.Body)
-	if r.ContentLength > 1<<20 {
+	const maxBody = 1 << 20
+	if r.ContentLength > maxBody {
 		return errors.New("request body too large")
 	}
-	return d.Decode(v)
+	d := json.NewDecoder(http.MaxBytesReader(nil, r.Body, maxBody))
+	d.DisallowUnknownFields()
+	if err := d.Decode(v); err != nil {
+		if errors.Is(err, io.EOF) {
+			return errors.New("request body is required")
+		}
+		return err
+	}
+	return nil
 }
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")

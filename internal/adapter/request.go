@@ -13,13 +13,14 @@ func DecodeJSON(r *http.Request, v any, max int64) error {
 		max = 1 << 20
 	}
 	if r.Body == nil {
-		return json.NewDecoder(r.Body).Decode(v)
+		return fmt.Errorf("request body is required")
 	}
-	r.Body = http.MaxBytesReader(nil, r.Body, max)
-	dec := json.NewDecoder(r.Body)
 	if r.ContentLength > max {
 		return fmt.Errorf("request body too large")
 	}
+	r.Body = http.MaxBytesReader(nil, r.Body, max)
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
 	if err := dec.Decode(v); err != nil {
 		if err == io.EOF {
 			return fmt.Errorf("request body is required")
