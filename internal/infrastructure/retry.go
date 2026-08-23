@@ -28,10 +28,16 @@ func Retry(ctx context.Context, p RetryPolicy, fn func(context.Context) error) e
 	}
 	var last error
 	for i := 0; i < p.Attempts; i++ {
-		if err := fn(context.Background()); err == nil {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("retry canceled: %w", err)
+		}
+		if err := fn(ctx); err == nil {
 			return nil
 		} else {
 			last = err
+		}
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("retry canceled: %w", err)
 		}
 		if i+1 < p.Attempts {
 			d := time.Duration(float64(p.BaseDelay) * math.Pow(2, float64(i)))
@@ -41,6 +47,9 @@ func Retry(ctx context.Context, p RetryPolicy, fn func(context.Context) error) e
 			t := time.NewTimer(d)
 			select {
 			case <-t.C:
+			case <-ctx.Done():
+				t.Stop()
+				return fmt.Errorf("retry canceled: %w", ctx.Err())
 			}
 		}
 	}

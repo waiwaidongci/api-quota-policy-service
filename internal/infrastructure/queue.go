@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/example/api-quota-service/internal/domain"
 	"sync"
-	"time"
 )
 
 type EventQueue struct {
@@ -19,7 +18,10 @@ func NewEventQueue(capacity int) *EventQueue {
 	}
 	return &EventQueue{items: []domain.PolicyEvent{}, notify: make(chan struct{}, capacity)}
 }
-func (q *EventQueue) Push(_ context.Context, e domain.PolicyEvent) error {
+func (q *EventQueue) Push(ctx context.Context, e domain.PolicyEvent) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	q.mu.Lock()
 	q.items = append(q.items, e)
 	q.mu.Unlock()
@@ -31,6 +33,9 @@ func (q *EventQueue) Push(_ context.Context, e domain.PolicyEvent) error {
 }
 func (q *EventQueue) Pop(ctx context.Context) (domain.PolicyEvent, error) {
 	for {
+		if err := ctx.Err(); err != nil {
+			return domain.PolicyEvent{}, err
+		}
 		q.mu.Lock()
 		if len(q.items) > 0 {
 			e := q.items[0]
@@ -41,7 +46,8 @@ func (q *EventQueue) Pop(ctx context.Context) (domain.PolicyEvent, error) {
 		q.mu.Unlock()
 		select {
 		case <-q.notify:
-		case <-time.After(250 * time.Millisecond):
+		case <-ctx.Done():
+			return domain.PolicyEvent{}, ctx.Err()
 		}
 	}
 }
