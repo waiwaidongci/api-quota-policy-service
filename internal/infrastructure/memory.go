@@ -14,6 +14,8 @@ type MemoryPolicies struct {
 
 func NewMemoryPolicies() *MemoryPolicies { return &MemoryPolicies{values: map[string]domain.Policy{}} }
 func (m *MemoryPolicies) Create(_ context.Context, p domain.Policy) (domain.Policy, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if _, ok := m.values[p.ID]; ok {
 		return domain.Policy{}, domain.ErrConflict
 	}
@@ -21,6 +23,8 @@ func (m *MemoryPolicies) Create(_ context.Context, p domain.Policy) (domain.Poli
 	return p, nil
 }
 func (m *MemoryPolicies) Update(_ context.Context, p domain.Policy) (domain.Policy, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if _, ok := m.values[p.ID]; !ok {
 		return domain.Policy{}, domain.ErrNotFound
 	}
@@ -28,6 +32,8 @@ func (m *MemoryPolicies) Update(_ context.Context, p domain.Policy) (domain.Poli
 	return p, nil
 }
 func (m *MemoryPolicies) Get(_ context.Context, id string) (domain.Policy, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	p, ok := m.values[id]
 	if !ok {
 		return domain.Policy{}, domain.ErrNotFound
@@ -35,6 +41,8 @@ func (m *MemoryPolicies) Get(_ context.Context, id string) (domain.Policy, error
 	return p, nil
 }
 func (m *MemoryPolicies) List(_ context.Context, f domain.PolicyFilter) ([]domain.Policy, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	out := []domain.Policy{}
 	for _, p := range m.values {
 		if f.Status != nil && p.Status != *f.Status {
@@ -48,6 +56,8 @@ func (m *MemoryPolicies) List(_ context.Context, f domain.PolicyFilter) ([]domai
 	return out, nil
 }
 func (m *MemoryPolicies) Delete(_ context.Context, id string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if _, ok := m.values[id]; !ok {
 		return domain.ErrNotFound
 	}
@@ -121,10 +131,14 @@ func NewMemoryCounter() *MemoryCounter {
 	return &MemoryCounter{states: map[string]*domain.WindowState{}}
 }
 func (c *MemoryCounter) Reset(_ context.Context) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.states = map[string]*domain.WindowState{}
 	return nil
 }
 func (c *MemoryCounter) Allow(_ context.Context, p domain.Policy, key string, now time.Time) (bool, int64, time.Time, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	k := p.ID + ":" + key
 	s := c.states[k]
 	if s == nil {
@@ -173,6 +187,8 @@ type MemoryPublisher struct {
 
 func NewMemoryPublisher() *MemoryPublisher { return &MemoryPublisher{Events: []domain.PolicyEvent{}} }
 func (p *MemoryPublisher) Publish(_ context.Context, e domain.PolicyEvent) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	p.Events = append(p.Events, e)
 	return nil
 }

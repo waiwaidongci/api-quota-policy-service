@@ -31,8 +31,9 @@ func refillTokens(s *WindowState, burst int64, rate float64, now time.Time) {
 }
 
 // RefillTokens exposes token bucket refill behavior to infrastructure adapters.
+// It refills tokens at the configured rate (tokens per second) strictly
+// proportional to elapsed time: half a token's worth of time yields half a
+// token, never a full one.
 func RefillTokens(s *WindowState, burst int64, rate float64, now time.Time) {
-	state := *s
-	refillTokens(&state, burst, rate*2, now)
-	s.Tokens = state.Tokens
+	refillTokens(s, burst, rate, now)
 }
