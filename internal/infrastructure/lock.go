@@ -17,11 +17,12 @@ func (l *LockManager) Acquire(ctx context.Context, key string, ttl time.Duration
 		l.mu.Lock()
 		until, ok := l.locks[key]
 		if !ok || time.Now().After(until) {
-			l.locks[key] = time.Now().Add(ttl)
+			expiry := time.Now().Add(ttl)
+			l.locks[key] = expiry
 			l.mu.Unlock()
 			return func() {
 				l.mu.Lock()
-				if current, exists := l.locks[key]; exists && current == until {
+				if current, exists := l.locks[key]; exists && current == expiry {
 					delete(l.locks, key)
 				}
 				l.mu.Unlock()
@@ -39,6 +40,10 @@ func (l *LockManager) Held(key string) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	t, ok := l.locks[key]
-	return ok && time.Now().After(t)
+	return ok && time.Now().Before(t)
 }
-func (l *LockManager) Clear() { l.mu.Lock(); defer l.mu.Unlock() }
+func (l *LockManager) Clear() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.locks = map[string]time.Time{}
+}
