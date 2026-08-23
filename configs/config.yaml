@@ -1,0 +1,7 @@
+server:
+  address: ":8084"
+  shutdown_timeout: "10s"
+log:
+  level: "info"
+storage:
+  driver: "memory"
