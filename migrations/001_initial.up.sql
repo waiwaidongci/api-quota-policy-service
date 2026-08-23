@@ -1,0 +1,4 @@
+CREATE TABLE services (id TEXT PRIMARY KEY, name TEXT NOT NULL, environment TEXT NOT NULL, tags JSONB NOT NULL DEFAULT '{}', created_at TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE TABLE policies (id TEXT PRIMARY KEY, name TEXT NOT NULL, priority INTEGER NOT NULL DEFAULT 0, algorithm TEXT NOT NULL, limit_value BIGINT NOT NULL, window_seconds BIGINT NOT NULL, burst BIGINT NOT NULL DEFAULT 0, refill_rate DOUBLE PRECISION NOT NULL DEFAULT 0, rule JSONB NOT NULL, status TEXT NOT NULL, version INTEGER NOT NULL, created_at TIMESTAMPTZ NOT NULL, updated_at TIMESTAMPTZ NOT NULL);
+CREATE INDEX policies_status_priority_idx ON policies(status, priority DESC);
+CREATE TABLE quota_events (id TEXT PRIMARY KEY, key TEXT NOT NULL, policy_id TEXT NOT NULL REFERENCES policies(id), reason TEXT NOT NULL, count_value BIGINT NOT NULL, limit_value BIGINT NOT NULL, created_at TIMESTAMPTZ NOT NULL);
