@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS quota_events; DROP TABLE IF EXISTS policies; DROP TABLE IF EXISTS services;

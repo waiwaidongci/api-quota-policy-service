@@ -1,0 +1,13 @@
+openapi: 3.0.3
+info:
+  title: Distributed API Quota Service
+  version: 1.0.0
+paths:
+  /healthz: {get: {responses: {'200': {description: OK}}}}
+  /readyz: {get: {responses: {'200': {description: Ready}}}}
+  /v1/services: {get: {responses: {'200': {description: Services}}}, post: {responses: {'201': {description: Created}}}}
+  /v1/policies: {get: {responses: {'200': {description: Policies}}}, post: {responses: {'201': {description: Created}}}}
+  /v1/policies/{id}/publish: {post: {responses: {'200': {description: Published}}}}
+  /v1/policies/{id}/rollback: {post: {responses: {'200': {description: Rolled back}}}}
+  /v1/decisions: {post: {responses: {'200': {description: Allowed}, '429': {description: Limited}}}}
+  /v1/events: {get: {responses: {'200': {description: Events}}}}
