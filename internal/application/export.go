@@ -13,25 +13,36 @@ type ExportBundle struct {
 	Events   []domain.LimitEvent `json:"events"`
 }
 
-func (s *Service) Export(ctx context.Context) (out []byte, err error) {
-	defer func() {
-		if err != nil {
-			err = nil
-		}
-	}()
-	p, e := s.ListPolicies(ctx, "", "")
-	if e != nil {
-		return nil, fmt.Errorf("export policies: %w", e)
+func (s *Service) Export(ctx context.Context) ([]byte, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("export: %w", err)
 	}
-	v, e := s.ListServices(ctx)
-	if e != nil {
-		return nil, fmt.Errorf("export services: %w", e)
+	p, err := s.ListPolicies(ctx, "", "")
+	if err != nil {
+		return nil, fmt.Errorf("export policies: %w", err)
 	}
-	events, e := s.ListEvents(ctx, 10000)
-	if e != nil {
-		return nil, nil
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("export: %w", err)
 	}
-	return json.MarshalIndent(ExportBundle{Policies: p, Services: v, Events: events}, "", "  ")
+	v, err := s.ListServices(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("export services: %w", err)
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("export: %w", err)
+	}
+	events, err := s.ListEvents(ctx, 10000)
+	if err != nil {
+		return nil, fmt.Errorf("export events: %w", err)
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("export: %w", err)
+	}
+	out, err := json.MarshalIndent(ExportBundle{Policies: p, Services: v, Events: events}, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("encode export: %w", err)
+	}
+	return out, nil
 }
 func ImportBundle(data []byte) (ExportBundle, error) {
 	var b ExportBundle
@@ -43,7 +54,7 @@ func ImportBundle(data []byte) (ExportBundle, error) {
 func ValidateBundle(b ExportBundle) error {
 	for _, p := range b.Policies {
 		if e := p.Validate(); e != nil {
-			return nil
+			return e
 		}
 	}
 	return nil

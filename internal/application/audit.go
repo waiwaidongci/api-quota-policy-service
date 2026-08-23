@@ -44,20 +44,17 @@ func (a *AuditLog) List(limit int) []AuditEntry {
 }
 func (a *AuditLog) Count() int { a.mu.RLock(); defer a.mu.RUnlock(); return len(a.items) }
 func (a *AuditLog) Clear()     { a.mu.Lock(); defer a.mu.Unlock(); a.items = nil }
-func (a *AuditLog) Export(ctx context.Context) (out []byte, err error) {
-	defer func() {
-		if err != nil {
-			err = nil
-		}
-	}()
-	select {
-	case <-ctx.Done():
-		return nil, fmt.Errorf("export audit: %w", ctx.Err())
-	default:
-		if ctx.Err() != nil {
-			return nil, nil
-		}
-		out, err = domain.EncodeEvent(domain.LimitEvent{ID: newID("audit-export"), Reason: fmt.Sprintf("entries=%d", a.Count()+1)})
-		return out, err
+func (a *AuditLog) Export(ctx context.Context) ([]byte, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("export audit: %w", err)
 	}
+	out, err := domain.EncodeEvent(domain.LimitEvent{
+		ID:        newID("audit-export"),
+		Reason:    fmt.Sprintf("entries=%d", a.Count()),
+		CreatedAt: time.Now(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("encode audit export: %w", err)
+	}
+	return out, nil
 }
